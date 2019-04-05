@@ -1,60 +1,51 @@
 ---
 title: "Commuting in LA"
-subtitle: "An analysis of time behind the wheel"
+subtitle: "An analysis of my time behind the wheel"
 output: html_document
 ---
 
 ## Summary
 
-Anyone living in LA will know that spending time behind the wheel is part of life here. In this document I visualize some of the data I have collected over the last few months on my commuting times in the drive between Marina Del Rey and my office in Santa Monica.
+Anyone living in LA will know that spending time behind the wheel is part of life in this part of the world. In this document I visualize some of the data I have collected over the last few months on my commuting times in the drive between Marina Del Rey and my office in Santa Monica.
 
 ## Setup
 
 ### Load Packages
 
-First we will load in the packages we need including the excellent `googleway` as well as my own `redbull` package for chart formatting.
+First we will load in the packages we need including the excellent `googlesheets` as well as our own `redbull` package for chart formatting.
 
-```{r load packages}
+```{r load packages, message = FALSE}
 library(googlesheets)
 library(tidyverse)
 library(magrittr)
 library(redbull)
 ```
 
-We also need to authorisetgoog
-
-```{r authorise googlesheets, eval=FALSE}
+```{r authorise googlesheets, echo = FALSE, message = FALSE, eval=FALSE}
 options(httr_oob_default = TRUE)
 gs_auth()
 gs_ls()
 ```
 
 ```{r}
+source("R/get_commuting_data.R")
+```
+
+Connect to our Google Sheet and extract the data we need.
+
+```{r extract data, message = FALSE}
 # Commuting sheet key
 commuting_sheet_key <- "1jCm2hkRckKBRtXgIXCEiGAjfN51rV6soV16TF7qjsxo"
-commuting_sheet <- gs_key(commuting_sheet_key)
 
-comm_data <- commuting_sheet %>% gs_read(col_types = list(
-  Timestamp = col_character(),
-  Date = col_character(),
-  Time = col_time(format = ""),
-  Direction = col_character(),
-  Route = col_character(),
-  Duration = col_character(),
-  Tram = col_character(),
-  Gil = col_character(),
-  `Other Info` = col_character()
-))
+comm_data <- get_commuting_data(commuting_sheet_key)
 
-comm_data.tidy <- comm_data %>%
-  mutate(Trip_Date = as.Date(Date, format = "%m/%d/%Y"),
-         Trip_Time = Time,
-         Trip_Duration_Minutes = (as.numeric(str_sub(Duration, 1, 2))*60 + as.numeric(str_sub(Duration, -2)))/60) %>%
-  #select(Trip_Date, Trip_Time, Direction, Route, Trip_Duration_Minutes) %>%
-  mutate(Trip_Weekday = weekdays(Trip_Date)) %>%
-  mutate(Trip_Weekday = factor(Trip_Weekday, levels(factor(Trip_Weekday))[c(2,4,5,3,1)]),
-         Direction = factor(Direction, levels(factor(Direction))[c(2,1)]))
+comm_data_clean <- clean_commuting_data(comm_data)
 
+```
+
+Ok so let's look at monthly commute time averages.
+
+```{r commute time over time, message = F}
 theme_set(theme_rb())
 
 comm_data.tidy %>%
