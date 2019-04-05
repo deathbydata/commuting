@@ -1,12 +1,14 @@
 ---
 title: "Commuting in LA"
 subtitle: "An analysis of my time behind the wheel"
-output: html_document
+output: github_document
 ---
 
 ## Summary
 
 Anyone living in LA will know that spending time behind the wheel is part of life in this part of the world. In this document I visualize some of the data I have collected over the last few months on my commuting times in the drive between Marina Del Rey and my office in Santa Monica.
+
+To collect the data I just created a Google Form which I then saved a link to on my phone. I (try to) record my time every day I take the car (which is not every day) and the results are then automatically saved into a Google Sheet.
 
 ## Setup
 
@@ -33,9 +35,11 @@ source("R/get_commuting_data.R")
 ```
 
 Connect to our Google Sheet and extract the data we need.
+```{r set googlesheet key, echo=FALSE, message=F}
+commuting_sheet_key <- Sys.getenv("COMMUTING_SHEET_KEY")
+```
 
 ```{r extract data, message = FALSE}
-commuting_sheet_key <- Sys.getenv("COMMUTING_SHEET_KEY")
 comm_data <- get_commuting_data(commuting_sheet_key)
 comm_data_clean <- clean_commuting_data(comm_data)
 ```
@@ -70,32 +74,33 @@ comm_data_clean %>%
   geom_smooth(se = F, span = 0.75)
 ```
 
-```{r, eval=F}
-comm_data.tidy %>%
-  ggplot(aes(x = Trip_Weekday, y = Trip_Duration_Minutes, fill = Direction)) + 
-  geom_boxplot() + 
-  facet_grid(~ Direction)
+What is the impact of travelling on different weekdays?
 
-comm_data.tidy %>%
-  ggplot(aes(x = Trip_Date, y = Trip_Duration_Minutes, colour = Direction)) +
-  geom_point() + 
-  geom_smooth(se = F)
-
-comm_data.tidy %>%
-  ggplot(aes(x = as.factor(lubridate::month(Trip_Date)), y = Trip_Duration_Minutes, fill = Direction)) + 
-  geom_boxplot() + 
-  facet_grid(~ Direction)
-
-
-comm_data.tidy %>% mutate(m = lubridate::month(Trip_Date)) %>% View()
-
-
-comm_data.mod <- comm_data.tidy %>% 
-  select(Trip_Duration_Minutes, Trip_Weekday, Direction, Trip_Date, Trip_Time) %>%
-  mutate(Trip_Month = as.factor(lubridate::month(Trip_Date))) %>%
-  select(-Trip_Date, -Trip_Time)
-
-commuting_mod <- lm(Trip_Duration_Minutes ~ ., data = comm_data.mod)
-
+```{r plot weekdays, message=FALSE, echo = F}
+comm_data_clean %>% 
+  ggplot(aes(x = Trip_Weekday, y = Trip_Duration_Minutes, fill = Direction)) +
+  geom_boxplot() +
+  scale_fill_redbull("bloomberg") +
+  labs(title = "I always thought Thursdays were worst!",
+       subtitle = "Average commuting time per weekday between Marina Del Rey and Santa Monica",
+       x = "Weekday",
+       y = "Commute Time (minutes)")
 ```
+
+Finally - how much does the time I leave affect my commute?
+
+```{r plot commute vs departure, message=FALSE, echo = F}
+comm_data_clean %>% 
+  filter((Trip_Time < hms("11:00:00") & Direction == "To Work") | (Trip_Time > hms("16:00:00") & Direction == 'From Work')) %>%
+  ggplot(aes(x = Trip_Time, y = Trip_Duration_Minutes, colour = Direction)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  scale_color_redbull("bloomberg") +
+  labs(title = "Leave early or late - no excuses!",
+       subtitle = "Commuting time between Marina Del Rey and Santa Monica (quadratic fit)",
+       x = "Departure Time",
+       y = "Commute Time (minutes)") +
+  facet_grid(Trip_Weekday ~ Direction, scales = "free")
+```
+
 
