@@ -16,6 +16,10 @@ To collect the data I just created a Google Form which I then saved a link to on
 
 First we will load in the packages we need including the excellent `googlesheets` as well as our own `redbull` package for chart formatting.
 
+```{r install redbull, echo=F, message=F, warning=FALSE, include=F}
+devtools::install_github("deathbydata/redbull")
+```
+
 ```{r load packages, message = FALSE}
 library(googlesheets)
 library(tidyverse)
