@@ -19,6 +19,7 @@ library(googlesheets)
 library(tidyverse)
 library(magrittr)
 library(redbull)
+library(lubridate)
 ```
 
 ```{r authorise googlesheets, echo = FALSE, message = FALSE, eval=FALSE}
@@ -27,34 +28,46 @@ gs_auth()
 gs_ls()
 ```
 
-```{r}
+```{r pull google data helper functions}
 source("R/get_commuting_data.R")
 ```
 
 Connect to our Google Sheet and extract the data we need.
 
 ```{r extract data, message = FALSE}
-# Commuting sheet key
-commuting_sheet_key <- "1jCm2hkRckKBRtXgIXCEiGAjfN51rV6soV16TF7qjsxo"
-
+commuting_sheet_key <- Sys.getenv("COMMUTING_SHEET_KEY")
 comm_data <- get_commuting_data(commuting_sheet_key)
-
 comm_data_clean <- clean_commuting_data(comm_data)
-
 ```
 
 Ok so let's look at monthly commute time averages.
 
-```{r commute time over time, message = F}
+```{r plot commute by month, echo = F}
 theme_set(theme_rb())
 
-comm_data.tidy %>%
-  ggplot(aes(x = Trip_Time, y = Trip_Duration_Minutes, colour = Direction, Direction)) +
+comm_data_clean %>% 
+  mutate(Trip_Month = format(Trip_Date, "%Y-%m")) %>%
+  ggplot(aes(x = Trip_Month, y = Trip_Duration_Minutes, fill = Direction)) +
+  geom_boxplot() +
+  scale_fill_redbull("bloomberg") +
+  labs(title = "Coming home in September sucks!",
+       subtitle = "Average monthly commuting time between Marina Del Rey and Santa Monica",
+       x = "Month",
+       y = "Commute Time (minutes)")
+```
+
+And a more granular view...
+
+```{r plot all commutes, message=FALSE, echo = F}
+comm_data_clean %>%
+  ggplot(aes(x = Trip_Date, y = Trip_Duration_Minutes, colour = Direction)) +
   geom_point() +
-  facet_wrap(~ Direction, scales = "free_x") +
-  geom_smooth(se = F)
-
-
+  scale_colour_redbull("bloomberg") +
+  labs(title = "Looks like it's getting worse...",
+       subtitle = "Commuting time between Marina Del Rey and Santa Monica",
+       x = "Month",
+       y = "Commute Time (minutes)") +
+  geom_smooth(se = F, span = 0.75)
 ```
 
 ```{r, eval=F}
